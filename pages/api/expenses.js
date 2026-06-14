@@ -1,4 +1,3 @@
-// pages/api/expenses.js
 import { checkAdmin } from '../../lib/auth'
 import { getExpenses, saveExpenses } from '../../lib/kv'
 
@@ -10,6 +9,11 @@ export default async function handler(req, res) {
     const newExp = { ...req.body, id: Date.now() }
     await saveExpenses([...expenses, newExp])
     return res.json({ ok: true, expense: newExp })
+  }
+  if (req.method === 'PUT') {
+    // Cập nhật toàn bộ danh sách (dùng để sửa 1 khoản)
+    await saveExpenses(req.body.expenses)
+    return res.json({ ok: true })
   }
   if (req.method === 'DELETE') {
     const expenses = await getExpenses()
