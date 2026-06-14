@@ -172,36 +172,38 @@ export default function Home() {
                 <span className="card-title">Danh sách ban chấp hành</span>
                 <input className="search-input" placeholder="Tìm tên..." value={search} onChange={e=>setSearch(e.target.value)} />
               </div>
-              <table>
+              <div style={{overflowX:'auto'}}>
+              <table style={{minWidth:640,tableLayout:'auto'}}>
                 <thead><tr>
-                  <th style={{width:28}}>#</th>
-                  <th style={{width:130}}>Họ và tên</th>
-                  <th style={{width:115}}>Chức vụ</th>
-                  <th style={{width:108}}>Điện thoại</th>
-                  <th style={{width:120,textAlign:'right'}}>Đã đóng (₫)</th>
-                  <th style={{width:90,textAlign:'center'}}>Hình thức</th>
-                  <th style={{width:85}}>Ngày đóng</th>
-                  <th style={{width:80,textAlign:'center'}}>Trạng thái</th>
+                  <th style={{width:28,whiteSpace:'nowrap'}}>#</th>
+                  <th style={{minWidth:130,whiteSpace:'nowrap'}}>Họ và tên</th>
+                  <th style={{minWidth:110,whiteSpace:'nowrap'}}>Chức vụ</th>
+                  <th style={{minWidth:105,whiteSpace:'nowrap'}}>Điện thoại</th>
+                  <th style={{minWidth:110,textAlign:'right',whiteSpace:'nowrap'}}>Đã đóng (₫)</th>
+                  <th style={{minWidth:95,textAlign:'center',whiteSpace:'nowrap'}}>Hình thức</th>
+                  <th style={{minWidth:85,whiteSpace:'nowrap'}}>Ngày đóng</th>
+                  <th style={{minWidth:80,textAlign:'center',whiteSpace:'nowrap'}}>Trạng thái</th>
                 </tr></thead>
                 <tbody>
                   {filteredMembers.map((m,i) => (
                     <tr key={m.id || i}>
                       <td style={{color:'#999'}}>{i+1}</td>
-                      <td style={{fontWeight:600}}>{m.name}</td>
-                      <td style={{fontSize:11,color:'#666'}}>{m.role}</td>
-                      <td style={{fontSize:11,color:'#666'}}>{m.phone}</td>
-                      <td style={{textAlign:'right',fontWeight:600,color:'#085041',fontVariantNumeric:'tabular-nums'}}>{m.paid > 0 ? fmt(m.paid) : '—'}</td>
-                      <td style={{textAlign:'center'}}>
+                      <td style={{fontWeight:600,whiteSpace:'nowrap'}}>{m.name}</td>
+                      <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{m.role}</td>
+                      <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{m.phone}</td>
+                      <td style={{textAlign:'right',fontWeight:600,color:'#085041',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{m.paid > 0 ? fmt(m.paid) : '—'}</td>
+                      <td style={{textAlign:'center',whiteSpace:'nowrap'}}>
                         {m.pm ? <span className={`pm-badge ${m.pm==='tien-mat'?'pm-tienmat':'pm-ck'}`}>{PM_LABELS[m.pm]}</span> : <span style={{color:'#999',fontSize:11}}>—</span>}
                       </td>
-                      <td style={{fontSize:11,color:'#666'}}>{m.paidDate || '—'}</td>
-                      <td style={{textAlign:'center'}}>
+                      <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{m.paidDate || '—'}</td>
+                      <td style={{textAlign:'center',whiteSpace:'nowrap'}}>
                         <span className={`badge ${m.paid>0?'b-paid':'b-none'}`}>{m.paid>0?'Đã đóng':'Chưa đóng'}</span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="right-col">
@@ -249,14 +251,15 @@ export default function Home() {
                   {Object.entries(CAT_LABELS).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
-              <table>
+              <div style={{overflowX:'auto'}}>
+              <table style={{minWidth:560,tableLayout:'auto'}}>
                 <thead><tr>
-                  <th style={{width:28}}>#</th>
-                  <th style={{width:85}}>Ngày</th>
-                  <th>Nội dung</th>
-                  <th style={{width:90}}>Danh mục</th>
-                  <th style={{width:110,textAlign:'right'}}>Số tiền (₫)</th>
-                  <th style={{width:100}}>Người chi</th>
+                  <th style={{width:28,whiteSpace:'nowrap'}}>#</th>
+                  <th style={{minWidth:85,whiteSpace:'nowrap'}}>Ngày</th>
+                  <th style={{minWidth:160}}>Nội dung</th>
+                  <th style={{minWidth:90,whiteSpace:'nowrap'}}>Danh mục</th>
+                  <th style={{minWidth:110,textAlign:'right',whiteSpace:'nowrap'}}>Số tiền (₫)</th>
+                  <th style={{minWidth:100,whiteSpace:'nowrap'}}>Người chi</th>
                 </tr></thead>
                 <tbody>
                   {filteredExpenses.length === 0
@@ -264,16 +267,17 @@ export default function Home() {
                     : filteredExpenses.map((e,i) => (
                       <tr key={e.id || i}>
                         <td style={{color:'#999'}}>{i+1}</td>
-                        <td style={{fontSize:11,color:'#666'}}>{e.date}</td>
+                        <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{e.date}</td>
                         <td style={{fontSize:12}}>{e.desc}</td>
-                        <td><span className="cat-pill" style={{background: CAT_COLORS[e.cat]+'22', color: CAT_COLORS[e.cat]}}>{CAT_LABELS[e.cat]||e.cat}</span></td>
-                        <td style={{textAlign:'right',fontWeight:600,color:'#A32D2D',fontVariantNumeric:'tabular-nums'}}>{fmt(e.amount)}</td>
-                        <td style={{fontSize:11,color:'#666'}}>{e.person}</td>
+                        <td><span className="cat-pill" style={{background: CAT_COLORS[e.cat]+'22', color: CAT_COLORS[e.cat], whiteSpace:'nowrap'}}>{CAT_LABELS[e.cat]||e.cat}</span></td>
+                        <td style={{textAlign:'right',fontWeight:600,color:'#A32D2D',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{fmt(e.amount)}</td>
+                        <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{e.person}</td>
                       </tr>
                     ))
                   }
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="right-col">
