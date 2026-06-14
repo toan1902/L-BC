@@ -104,6 +104,13 @@ export default function Admin() {
     if (r.ok) { fetchData(); setModal(null) }
   }
 
+  async function updateExpense(exp) {
+    const expenses = data.expenses.map(e => e.id === exp.id ? exp : e)
+    await fetch('/api/expenses', { method: 'PUT', headers: authHeader(), body: JSON.stringify({ expenses }) })
+    fetchData()
+    setModal(null)
+  }
+
   async function deleteExpense(id) {
     if (!confirm('Xoá khoản chi này?')) return
     await fetch('/api/expenses', { method: 'DELETE', headers: authHeader(), body: JSON.stringify({ id }) })
@@ -225,7 +232,7 @@ export default function Admin() {
                 <th style={{minWidth:110,textAlign:'center'}}>Hình thức</th>
                 <th style={{minWidth:110}}>Ngày đóng</th>
                 <th style={{minWidth:80,textAlign:'center'}}>Trạng thái</th>
-                <th style={{width:50}}></th>
+                <th style={{width:100}}></th>
               </tr></thead>
               <tbody>
                 {members.map((m,i) => (
@@ -284,7 +291,7 @@ export default function Admin() {
                 <th style={{minWidth:90}}>Danh mục</th>
                 <th style={{minWidth:110,textAlign:'right'}}>Số tiền (₫)</th>
                 <th style={{minWidth:100}}>Người chi</th>
-                <th style={{width:50}}></th>
+                <th style={{width:100}}></th>
               </tr></thead>
               <tbody>
                 {expenses.length === 0
@@ -297,7 +304,8 @@ export default function Admin() {
                       <td style={{fontSize:11}}>{CAT_LABELS[e.cat]||e.cat}</td>
                       <td style={{textAlign:'right',fontWeight:600,color:'#A32D2D',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{fmt(e.amount)}</td>
                       <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{e.person}</td>
-                      <td>
+                      <td style={{display:'flex',gap:4}}>
+                        <button className="btn" style={{padding:'3px 7px',fontSize:11}} onClick={()=>setModal({type:'editExpense',data:e})}>Sửa</button>
                         <button className="btn btn-danger" style={{padding:'3px 7px',fontSize:11}} onClick={()=>deleteExpense(e.id)}>Xoá</button>
                       </td>
                     </tr>
@@ -312,6 +320,7 @@ export default function Admin() {
 
       {modal === 'member' && <MemberModal members={members} onSave={addMember} onClose={()=>setModal(null)} />}
       {modal === 'expense' && <ExpenseModal members={members} onSave={addExpense} onClose={()=>setModal(null)} />}
+      {modal?.type === 'editExpense' && <ExpenseModal members={members} initial={modal.data} onSave={updateExpense} onClose={()=>setModal(null)} />}
     </>
   )
 }
@@ -347,8 +356,8 @@ function MemberModal({ onSave, onClose }) {
   )
 }
 
-function ExpenseModal({ members, onSave, onClose }) {
-  const [f, setF] = useState({ date: today(), desc:'', cat:'hanh-chinh', amount:0, person: members[0]?.name||'' })
+function ExpenseModal({ members, onSave, onClose, initial }) {
+  const [f, setF] = useState(initial || { date: today(), desc:'', cat:'hanh-chinh', amount:0, person: members[0]?.name||'' })
   const up = (k, v) => setF(p => ({...p, [k]: v}))
   return (
     <div className="modal-overlay open" onClick={e=>e.target===e.currentTarget&&onClose()}>
