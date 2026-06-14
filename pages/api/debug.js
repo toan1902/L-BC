@@ -1,14 +1,17 @@
-// pages/api/debug.js - chỉ dùng để test, xoá sau
+// pages/api/debug.js
 export default async function handler(req, res) {
   const url = process.env.KV_REST_API_URL
   const token = process.env.KV_REST_API_TOKEN
+  const envKeys = Object.keys(process.env).filter(k => 
+    k.includes('KV') || k.includes('UPSTASH') || k.includes('REDIS')
+  )
   
   if (!url || !token) {
     return res.json({ 
-      error: 'Thiếu biến môi trường',
-      KV_REST_API_URL: url ? 'có' : 'KHÔNG CÓ',
-      KV_REST_API_TOKEN: token ? 'có' : 'KHÔNG CÓ',
-      allEnvKeys: Object.keys(process.env).filter(k => k.includes('KV') || k.includes('UPSTASH') || k.includes('REDIS'))
+      status: 'MISSING ENV VARS',
+      envKeys,
+      KV_REST_API_URL: url ? 'CÓ' : 'KHÔNG CÓ',
+      KV_REST_API_TOKEN: token ? 'CÓ' : 'KHÔNG CÓ'
     })
   }
 
@@ -18,8 +21,12 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${token}` }
     })
     const data = await r.json()
-    return res.json({ ok: true, upstash: data, url: url.substring(0,30)+'...' })
+    return res.json({ 
+      status: 'OK - Upstash kết nối thành công!', 
+      result: data,
+      url: url.substring(0,40)+'...'
+    })
   } catch(e) {
-    return res.json({ error: e.message })
+    return res.json({ status: 'LỖI', error: e.message })
   }
 }
