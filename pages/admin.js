@@ -6,32 +6,59 @@ import { CAT_LABELS, PM_LABELS } from '../lib/data'
 function fmt(n) { return Number(n || 0).toLocaleString('vi-VN') }
 function today() { return new Date().toISOString().slice(0,10) }
 
+const TOKEN_KEY = 'ldbc_admin_token'
+
 export default function Admin() {
   const [authed, setAuthed] = useState(false)
+  const [token, setToken] = useState('')
   const [pw, setPw] = useState('')
   const [pwErr, setPwErr] = useState('')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({ members: [], expenses: [] })
   const [tab, setTab] = useState('thu')
-  const [modal, setModal] = useState(null) // 'member' | 'expense'
+  const [modal, setModal] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  // Check cookie on load
+  // Check saved token on load
   useEffect(() => {
-    fetch('/api/data').then(r => r.ok ? r.json() : null).then(d => d && setData(d))
+    const saved = localStorage.getItem(TOKEN_KEY)
+    if (saved) { setToken(saved); setAuthed(true); fetchData(saved) }
+    else { fetch('/api/data').then(r => r.ok ? r.json() : null).then(d => d && setData(d)) }
   }, [])
+
+  function authHeader(t) {
+    return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (t || token) }
+  }
 
   async function login(e) {
     e.preventDefault()
     setLoading(true)
-    const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pw}) })
+    setPwErr('')
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    })
     setLoading(false)
-    if (r.ok) { setAuthed(true); fetchData() }
-    else setPwErr('Sai mật khẩu, thử lại')
+    if (r.ok) {
+      const { token: tk } = await r.json()
+      localStorage.setItem(TOKEN_KEY, tk)
+      setToken(tk)
+      setAuthed(true)
+      fetchData(tk)
+    } else {
+      setPwErr('Sai mật khẩu, thử lại')
+    }
   }
 
-  async function fetchData() {
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY)
+    setAuthed(false)
+    setToken('')
+  }
+
+  async function fetchData(tk) {
     const r = await fetch('/api/data')
     if (r.ok) setData(await r.json())
   }
@@ -50,31 +77,36 @@ export default function Admin() {
 
   async function saveMembersNow() {
     setSaving(true)
-    await fetch('/api/members', { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({members: data.members}) })
+    const r = await fetch('/api/members', {
+      method: 'PUT',
+      headers: authHeader(),
+      body: JSON.stringify({ members: data.members })
+    })
     setSaving(false)
+    if (r.status === 401) { alert('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại'); logout(); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
 
   async function addMember(m) {
-    const r = await fetch('/api/members', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(m) })
+    const r = await fetch('/api/members', { method: 'POST', headers: authHeader(), body: JSON.stringify(m) })
     if (r.ok) { fetchData(); setModal(null) }
   }
 
   async function deleteMember(id) {
     if (!confirm('Xoá thành viên này?')) return
-    await fetch('/api/members', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id}) })
+    await fetch('/api/members', { method: 'DELETE', headers: authHeader(), body: JSON.stringify({ id }) })
     fetchData()
   }
 
   async function addExpense(exp) {
-    const r = await fetch('/api/expenses', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(exp) })
+    const r = await fetch('/api/expenses', { method: 'POST', headers: authHeader(), body: JSON.stringify(exp) })
     if (r.ok) { fetchData(); setModal(null) }
   }
 
   async function deleteExpense(id) {
     if (!confirm('Xoá khoản chi này?')) return
-    await fetch('/api/expenses', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id}) })
+    await fetch('/api/expenses', { method: 'DELETE', headers: authHeader(), body: JSON.stringify({ id }) })
     fetchData()
   }
 
@@ -85,8 +117,8 @@ export default function Admin() {
   }
 
   function exportBaoCao() {
-    const totalPaid = data.members.reduce((a,m) => a+m.paid,0)
-    const totalChi = data.expenses.reduce((a,e) => a+e.amount,0)
+    const totalPaid = data.members.reduce((a,m) => a+m.paid, 0)
+    const totalChi = data.expenses.reduce((a,e) => a+e.amount, 0)
     const lines = [
       '\uFEFF=== BÁO CÁO THU CHI CLB DOANH NHÂN HỌ LÊ ĐẮK LẮK (LĐBC) ===',
       'Ngày xuất: ' + new Date().toLocaleDateString('vi-VN'), '',
@@ -117,7 +149,7 @@ export default function Admin() {
           <h1>Đăng nhập Admin</h1>
           <p>CLB Doanh Nhân Họ Lê Đắk Lắk</p>
           <form onSubmit={login}>
-            <input className="login-input" type="password" placeholder="Mật khẩu admin" value={pw} onChange={e=>setPw(e.target.value)} autoFocus />
+            <input className="login-input" type="password" placeholder="Nhập mật khẩu admin" value={pw} onChange={e=>setPw(e.target.value)} autoFocus />
             <button className="login-btn" type="submit" disabled={loading}>{loading ? 'Đang kiểm tra...' : 'Đăng nhập'}</button>
             {pwErr && <div className="error-msg">{pwErr}</div>}
           </form>
@@ -138,7 +170,10 @@ export default function Admin() {
 
       <div className="admin-bar">
         <span>🔐 Chế độ Admin — CLB Doanh Nhân Họ Lê Đắk Lắk</span>
-        <span><a href="/">← Xem trang công khai</a></span>
+        <span style={{display:'flex',gap:16,alignItems:'center'}}>
+          <a href="/">← Xem trang công khai</a>
+          <button onClick={logout} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',padding:'4px 10px',borderRadius:4,cursor:'pointer',fontSize:12}}>Đăng xuất</button>
+        </span>
       </div>
 
       <div className="container">
@@ -152,11 +187,10 @@ export default function Admin() {
           </div>
           <div style={{display:'flex',gap:8}}>
             <button className="btn" onClick={exportCSV}>📥 Xuất hội phí CSV</button>
-            <button className="btn btn-primary" onClick={exportBaoCao}>📊 Xuất báo cáo tổng hợp</button>
+            <button className="btn btn-primary" onClick={exportBaoCao}>📊 Xuất báo cáo</button>
           </div>
         </div>
 
-        {/* Metrics */}
         <div className="metrics">
           <div className="metric"><div className="metric-label">Tổng thu</div><div className="metric-val" style={{color:'#085041'}}>{fmt(totalPaid)}</div><div className="metric-sub">₫</div></div>
           <div className="metric"><div className="metric-label">Đã đóng</div><div className="metric-val">{members.filter(m=>m.paid>0).length}/{members.length}</div><div className="metric-sub">thành viên</div></div>
@@ -169,28 +203,28 @@ export default function Admin() {
           <div className={`tab ${tab==='chi'?'active':''}`} onClick={()=>setTab('chi')}>Khoản chi</div>
         </div>
 
-        {/* Tab hội phí */}
         <div className={`section ${tab==='thu'?'active':''}`}>
           <div className="card">
             <div className="card-head">
-              <span className="card-title">Danh sách — nhập trực tiếp ô "Đã đóng"</span>
+              <span className="card-title">Nhập trực tiếp ô "Đã đóng" rồi nhấn Lưu</span>
               <div className="row-actions">
                 <button className="btn" onClick={()=>setModal('member')}>+ Thêm thành viên</button>
                 <button className="btn btn-primary" onClick={saveMembersNow} disabled={saving}>
-                  {saved ? '✓ Đã lưu' : saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
+                  {saved ? '✓ Đã lưu!' : saving ? 'Đang lưu...' : '💾 Lưu thay đổi'}
                 </button>
               </div>
             </div>
-            <table>
+            <div style={{overflowX:'auto'}}>
+            <table style={{minWidth:700,tableLayout:'auto'}}>
               <thead><tr>
                 <th style={{width:28}}>#</th>
-                <th style={{width:120}}>Họ và tên</th>
-                <th style={{width:112}}>Chức vụ</th>
-                <th style={{width:105}}>Điện thoại</th>
-                <th style={{width:120,textAlign:'right'}}>Đã đóng (₫)</th>
-                <th style={{width:110,textAlign:'center'}}>Hình thức</th>
-                <th style={{width:85}}>Ngày đóng</th>
-                <th style={{width:80,textAlign:'center'}}>Trạng thái</th>
+                <th style={{minWidth:120}}>Họ và tên</th>
+                <th style={{minWidth:110}}>Chức vụ</th>
+                <th style={{minWidth:105}}>Điện thoại</th>
+                <th style={{minWidth:120,textAlign:'right'}}>Đã đóng (₫)</th>
+                <th style={{minWidth:110,textAlign:'center'}}>Hình thức</th>
+                <th style={{minWidth:110}}>Ngày đóng</th>
+                <th style={{minWidth:80,textAlign:'center'}}>Trạng thái</th>
                 <th style={{width:50}}></th>
               </tr></thead>
               <tbody>
@@ -231,24 +265,25 @@ export default function Admin() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
-        {/* Tab chi */}
         <div className={`section ${tab==='chi'?'active':''}`}>
           <div className="card">
             <div className="card-head">
               <span className="card-title">Khoản chi</span>
               <button className="btn btn-primary" onClick={()=>setModal('expense')}>+ Ghi khoản chi</button>
             </div>
-            <table>
+            <div style={{overflowX:'auto'}}>
+            <table style={{minWidth:560,tableLayout:'auto'}}>
               <thead><tr>
                 <th style={{width:28}}>#</th>
-                <th style={{width:85}}>Ngày</th>
+                <th style={{minWidth:85}}>Ngày</th>
                 <th>Nội dung</th>
-                <th style={{width:90}}>Danh mục</th>
-                <th style={{width:110,textAlign:'right'}}>Số tiền (₫)</th>
-                <th style={{width:100}}>Người chi</th>
+                <th style={{minWidth:90}}>Danh mục</th>
+                <th style={{minWidth:110,textAlign:'right'}}>Số tiền (₫)</th>
+                <th style={{minWidth:100}}>Người chi</th>
                 <th style={{width:50}}></th>
               </tr></thead>
               <tbody>
@@ -257,11 +292,11 @@ export default function Admin() {
                   : expenses.map((e,i) => (
                     <tr key={e.id || i}>
                       <td style={{color:'#999'}}>{i+1}</td>
-                      <td style={{fontSize:11,color:'#666'}}>{e.date}</td>
+                      <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{e.date}</td>
                       <td style={{fontSize:12}}>{e.desc}</td>
                       <td style={{fontSize:11}}>{CAT_LABELS[e.cat]||e.cat}</td>
-                      <td style={{textAlign:'right',fontWeight:600,color:'#A32D2D',fontVariantNumeric:'tabular-nums'}}>{fmt(e.amount)}</td>
-                      <td style={{fontSize:11,color:'#666'}}>{e.person}</td>
+                      <td style={{textAlign:'right',fontWeight:600,color:'#A32D2D',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap'}}>{fmt(e.amount)}</td>
+                      <td style={{fontSize:11,color:'#666',whiteSpace:'nowrap'}}>{e.person}</td>
                       <td>
                         <button className="btn btn-danger" style={{padding:'3px 7px',fontSize:11}} onClick={()=>deleteExpense(e.id)}>Xoá</button>
                       </td>
@@ -270,11 +305,11 @@ export default function Admin() {
                 }
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modal thêm thành viên */}
       {modal === 'member' && <MemberModal members={members} onSave={addMember} onClose={()=>setModal(null)} />}
       {modal === 'expense' && <ExpenseModal members={members} onSave={addExpense} onClose={()=>setModal(null)} />}
     </>
