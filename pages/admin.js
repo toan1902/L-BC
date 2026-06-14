@@ -105,8 +105,9 @@ export default function Admin() {
   }
 
   async function updateExpense(exp) {
-    const expenses = data.expenses.map(e => e.id === exp.id ? exp : e)
-    await fetch('/api/expenses', { method: 'PUT', headers: authHeader(), body: JSON.stringify({ expenses }) })
+    // Xoá cũ trước, sau đó thêm lại với dữ liệu mới (giữ nguyên id)
+    await fetch('/api/expenses', { method: 'DELETE', headers: authHeader(), body: JSON.stringify({ id: exp.id }) })
+    await fetch('/api/expenses', { method: 'POST', headers: authHeader(), body: JSON.stringify(exp) })
     fetchData()
     setModal(null)
   }
